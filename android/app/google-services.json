@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "542044117550",
+    "project_id": "nextrade-3aba7",
+    "storage_bucket": "nextrade-3aba7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:542044117550:android:e5ccc392fc7dd235de5dbf",
+        "android_client_info": {
+          "package_name": "com.nextrade.nextrade"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "542044117550-264qu9k99kl92eairg486dupc19ear47.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEL0QyZ2FPNL9Dx1yaKziCLmQrB-py8Vo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "542044117550-264qu9k99kl92eairg486dupc19ear47.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "542044117550-ia1uo6vb4mpa65f0ehpc65eueql7h7r3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.nextrade.nextrade"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
