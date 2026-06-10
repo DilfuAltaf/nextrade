@@ -1,237 +1,98 @@
-# 21. Realtime Market System
+# Market Coverage & Asset Management
 
-## Overview
-NexTrade menggunakan sistem realtime market untuk menampilkan harga market secara live tanpa perlu refresh manual.
-
-Sistem realtime ini digunakan untuk:
-- Live market price
-- Live chart update
-- Portfolio realtime
-- Profit/Loss realtime
-- Watchlist realtime
-- Trading simulation realtime
+NexTrade menyediakan berbagai jenis market menggunakan data market asli untuk memberikan pengalaman simulasi trading yang realistis bagi pengguna. Tujuan fitur ini adalah menjelaskan bahwa NexTrade tidak hanya menyediakan beberapa asset, tetapi memiliki cakupan market yang luas layaknya aplikasi trading modern sungguhan.
 
 ---
 
-## Realtime Technologies
+## Supported Markets
 
-### WebSocket
-NexTrade menggunakan WebSocket untuk menerima data market secara realtime dari server market provider.
+### Cryptocurrency
+* Menggunakan Binance API sebagai sumber data utama
+* Mendukung minimal 300 hingga 500+ crypto assets
+* Data market bersifat realtime menggunakan WebSocket
+* Contoh asset: BTC, ETH, SOL, XRP, ADA, DOGE, BNB, AVAX, LINK, SUI
 
-Keuntungan:
-- Low latency
-- Realtime update
-- Efisien dibanding polling API
-- Cocok untuk aplikasi trading
+### Forex
+* Mendukung minimal 20–30 pasangan mata uang
+* Contoh: EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CAD, NZD/USD
 
----
+### Stocks
+* Fokus pada saham populer Indonesia
+* Mendukung minimal 50 saham Indonesia
+* Contoh: BBCA, BBRI, BMRI, TLKM, ASII, GOTO, ICBP, INDF
 
-## Market Data Providers
-
-### Main Provider
-- Binance WebSocket API
-
-### Additional Providers
-- TradingView
-- Custom Firebase Backend
-
----
-
-# 22. Realtime Data Flow
-
-```text
-Binance WebSocket
-        ↓
-Market Service
-        ↓
-Provider State Management
-        ↓
-Realtime UI Update
-        ↓
-Chart & Portfolio Update
-```
+### Gold & Commodities
+* XAU/USD (Gold)
+* XAG/USD (Silver)
+* Kemungkinan pengembangan untuk Oil dan Natural Gas
 
 ---
 
-# 23. Realtime Features
+## Market Categories
 
-## Live Market Prices
-Harga market berubah secara realtime:
-- BTC
-- ETH
-- Forex
-- Gold
-- Stocks
-
-## Live Portfolio Tracking
-Portfolio user otomatis berubah mengikuti harga market terbaru.
-
-## Realtime Profit & Loss
-Profit dan loss dihitung otomatis berdasarkan perubahan market.
-
-## Realtime Watchlist
-Watchlist akan memperbarui harga asset secara live.
-
-## Live Trading Charts
-Chart trading berubah secara realtime menggunakan candlestick data.
+Market dikelompokkan menjadi:
+* Favorites
+* Crypto
+* Forex
+* Stocks
+* Commodities
+* Top Gainers
+* Top Losers
+* Trending
 
 ---
 
-# 24. Chart System
+## Search System
 
-## Chart Type
-- Candlestick Chart
-- Line Chart
-- Market Depth Visualization
-
-## Chart Provider
-### Primary
-- TradingView Lightweight Charts
-
-### Alternative
-- fl_chart
-- Syncfusion Flutter Charts
-
-## Chart Features
-- Zoom
-- Pan
-- Candle analysis
-- Timeframe selection
-- Technical indicators
+User dapat mencari asset berdasarkan:
+* Nama asset
+* Symbol
+* Kategori market
 
 ---
 
-# 25. Firebase Realtime Usage
+## Watchlist
 
-## Firebase Responsibilities
-Firebase digunakan untuk:
-- Authentication
-- User data
-- Portfolio storage
-- Watchlist storage
-- Leaderboard
-- User preferences
-- AI chat history
-
-## Firestore Collections
-```text
-users/
-portfolio/
-watchlist/
-transactions/
-leaderboard/
-market_cache/
-ai_history/
-```
+User dapat:
+* Menambahkan asset ke watchlist
+* Menghapus asset dari watchlist
+* Melihat update harga realtime
 
 ---
 
-# 26. Market Service Architecture
+## Market Ranking
 
-## Market Service Responsibilities
-- Connect to Binance WebSocket
-- Parse realtime market data
-- Update Provider state
-- Handle reconnection
-- Cache market data
-
-## Example Architecture
-```text
-WebSocket
-    ↓
-Market Service
-    ↓
-Market Provider
-    ↓
-UI Screens
-```
+Sistem menampilkan:
+* Top Gainers
+* Top Losers
+* Most Traded
+* Trending Assets
 
 ---
 
-# 27. Provider State Management
+## Realtime Market System
 
-## Market Provider
-Digunakan untuk:
-- Current market prices
-- Selected asset
-- Chart data
-- Trading states
-
-## Portfolio Provider
-Digunakan untuk:
-- User assets
-- Profit/Loss
-- Balance calculation
-
-## Theme Provider
-Digunakan untuk:
-- Dark mode
-- Light mode
-
-## Auth Provider
-Digunakan untuk:
-- Login state
-- User session
-- Authentication management
+* Harga market diperbarui secara realtime menggunakan WebSocket
+* Chart diperbarui secara realtime
+* Watchlist diperbarui secara realtime
+* Portfolio diperbarui secara realtime
+* Profit/Loss diperbarui secara realtime
 
 ---
 
-# 28. Realtime Performance Optimization
+## Technical Requirement
 
-## Optimization Methods
-- Stream-based update
-- Lazy loading
-- Cached market data
-- Efficient state update
-- Background websocket reconnect
-
-## Goals
-- Smooth realtime UI
-- Low memory usage
-- Fast chart rendering
-- Stable websocket connection
+* Market data tidak disimpan seluruhnya di Firebase
+* Data market diambil langsung dari provider market
+* Firebase hanya digunakan untuk user data, watchlist, portfolio, leaderboard, settings, dan AI history
 
 ---
 
-# 29. Recommended Flutter Packages
+## Scalability
 
-## Core Packages
-```yaml
-provider:
-go_router:
-firebase_core:
-firebase_auth:
-cloud_firestore:
-firebase_database:
-google_sign_in:
-```
-
-## Realtime & API Packages
-```yaml
-web_socket_channel:
-dio:
-http:
-```
-
-## Chart Packages
-```yaml
-fl_chart:
-syncfusion_flutter_charts:
-```
-
-## Local Storage
-```yaml
-shared_preferences:
-```
-
----
-
-# 30. Future Realtime Improvements
-
-## Planned Features
-- Multi-chart support
-- Advanced technical indicators
-- Realtime AI prediction
-- Smart signal notification
-- Advanced market analytics
-- Live copy trading simulation
+Struktur market dirancang agar dapat mendukung:
+* 500+ crypto assets
+* 30+ forex pairs
+* 50+ Indonesian stocks
+* Gold & commodities
+tanpa perlu perubahan besar pada arsitektur aplikasi.

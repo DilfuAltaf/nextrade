@@ -43,6 +43,9 @@ dependencies:
   cloud_firestore: ^5.6.5
   google_sign_in: ^6.3.0
   uuid: ^4.5.1
+  fl_chart: ^1.1.0
+  web_socket_channel: ^3.0.3
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
@@ -96,3 +99,6 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+dependency_overrides:
+  vector_math: ^2.3.0

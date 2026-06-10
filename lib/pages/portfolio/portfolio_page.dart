@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:nextrade/app/routes/route_names.dart';
 import 'package:nextrade/app/theme/app_theme.dart';
 import 'package:nextrade/providers/auth_controller.dart';
 import 'package:nextrade/providers/portfolio_controller.dart';
@@ -51,15 +53,83 @@ class PortfolioPage extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: 24),
-              Container(
-                width: double.infinity, height: 120, padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: AppTheme.darkCard, borderRadius: BorderRadius.circular(16)),
-                child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.pie_chart_outline, size: 40, color: AppTheme.primaryPurple.withValues(alpha: 0.5)),
-                  const SizedBox(height: 8),
-                  Text('Chart Distribusi Aset', style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
-                ])),
-              ),
+              if (portfolio.portfolioAssets.isNotEmpty && portfolio.portfolioValue.value > 0)
+                Container(
+                  width: double.infinity,
+                  height: 200,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: AppTheme.darkCard, borderRadius: BorderRadius.circular(16)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: PieChart(
+                          PieChartData(
+                            sectionsSpace: 2,
+                            centerSpaceRadius: 40,
+                            sections: portfolio.portfolioAssets.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final asset = entry.value;
+                              final percentage = portfolio.getAssetPercentage(asset);
+                              final color = _getAssetColor(index);
+                              return PieChartSectionData(
+                                color: color,
+                                value: percentage,
+                                title: percentage > 5 ? '${percentage.toStringAsFixed(1)}%' : '',
+                                radius: 25,
+                                titleStyle: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: portfolio.portfolioAssets.take(5).toList().asMap().entries.map((entry) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: _getAssetColor(entry.key),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  entry.value.symbol,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      )
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  width: double.infinity, height: 120, padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: AppTheme.darkCard, borderRadius: BorderRadius.circular(16)),
+                  child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.pie_chart_outline, size: 40, color: AppTheme.primaryPurple.withValues(alpha: 0.5)),
+                    const SizedBox(height: 8),
+                    Text('Belum ada distribusi aset', style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
+                  ])),
+                ),
               const SizedBox(height: 24),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 Text('Aset Saya', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -88,7 +158,20 @@ class PortfolioPage extends StatelessWidget {
                   final percentage = portfolio.getAssetPercentage(asset);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: _buildAssetItem(asset, price, change, profit, profitPercent, percentage),
+                    child: GestureDetector(
+                      onTap: () {
+                        if (market != null) {
+                          Get.toNamed(RouteNames.chart, arguments: {
+                            'id': market.id,
+                            'name': market.name,
+                            'symbol': market.symbol,
+                            'price': market.price,
+                            'change': market.change,
+                          });
+                        }
+                      },
+                      child: _buildAssetItem(asset, price, change, profit, profitPercent, percentage),
+                    ),
                   );
                 }),
             ],
@@ -128,5 +211,19 @@ class PortfolioPage extends StatelessWidget {
         Align(alignment: Alignment.centerRight, child: Text('${percentage.toStringAsFixed(1)}% dari portofolio', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary))),
       ]),
     );
+  }
+
+  Color _getAssetColor(int index) {
+    final colors = [
+      AppTheme.primaryPurple,
+      AppTheme.accentGreen,
+      Colors.blue,
+      Colors.orange,
+      AppTheme.errorRed,
+      Colors.teal,
+      Colors.pink,
+      Colors.amber,
+    ];
+    return colors[index % colors.length];
   }
 }

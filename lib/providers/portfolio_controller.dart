@@ -17,6 +17,15 @@ class PortfolioController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    ever(_authController.user, (user) {
+      if (user != null) {
+        loadPortfolio();
+      } else {
+        portfolioAssets.clear();
+        portfolioValue.value = 0;
+        totalProfit.value = 0;
+      }
+    });
     loadPortfolio();
   }
 
@@ -26,7 +35,7 @@ class PortfolioController extends GetxController {
       final userId = _authController.user.value?.uid;
       if (userId == null) return;
       final data = await _firestoreService.getPortfolio(userId);
-      portfolioAssets.value = data;
+      portfolioAssets.value = data.where((a) => a.amount > 0.000001).toList();
       calculatePortfolioValue();
     } catch (e) {
       Get.snackbar('Error', 'Gagal memuat portofolio');

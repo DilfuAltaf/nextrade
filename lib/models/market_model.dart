@@ -6,7 +6,7 @@ class MarketModel {
   final double change;
   final double high24h;
   final double low24h;
-  final String volume;
+  final double volume;
   final String category;
 
   MarketModel({
@@ -35,17 +35,32 @@ class MarketModel {
     'category': category,
   };
 
-  factory MarketModel.fromMap(Map<String, dynamic> map) => MarketModel(
-    id: map['id'] as String,
-    name: map['name'] as String,
-    symbol: map['symbol'] as String,
-    price: (map['price'] as num).toDouble(),
-    change: (map['change'] as num).toDouble(),
-    high24h: (map['high24h'] as num).toDouble(),
-    low24h: (map['low24h'] as num).toDouble(),
-    volume: map['volume'] as String,
-    category: map['category'] as String,
-  );
+  factory MarketModel.fromMap(Map<String, dynamic> map) {
+    double parseVolume(dynamic vol) {
+      if (vol is num) return vol.toDouble();
+      if (vol is String) {
+        String parsed = vol.toUpperCase().replaceAll('B', '').replaceAll('M', '').replaceAll('K', '');
+        double val = double.tryParse(parsed) ?? 0.0;
+        if (vol.toUpperCase().contains('B')) val *= 1000000000;
+        else if (vol.toUpperCase().contains('M')) val *= 1000000;
+        else if (vol.toUpperCase().contains('K')) val *= 1000;
+        return val;
+      }
+      return 0.0;
+    }
+
+    return MarketModel(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      symbol: map['symbol'] as String,
+      price: (map['price'] as num).toDouble(),
+      change: (map['change'] as num).toDouble(),
+      high24h: (map['high24h'] as num).toDouble(),
+      low24h: (map['low24h'] as num).toDouble(),
+      volume: parseVolume(map['volume']),
+      category: map['category'] as String,
+    );
+  }
 
   MarketModel copyWith({
     String? id,
@@ -55,7 +70,7 @@ class MarketModel {
     double? change,
     double? high24h,
     double? low24h,
-    String? volume,
+    double? volume,
     String? category,
   }) => MarketModel(
     id: id ?? this.id,

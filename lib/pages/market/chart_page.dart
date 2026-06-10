@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,7 +8,7 @@ import 'package:nextrade/app/routes/route_names.dart';
 import 'package:nextrade/app/theme/app_theme.dart';
 import 'package:nextrade/providers/auth_controller.dart';
 import 'package:nextrade/providers/trading_controller.dart';
-
+import 'package:nextrade/providers/portfolio_controller.dart';
 class ChartPage extends StatefulWidget {
   const ChartPage({super.key});
 
@@ -16,14 +19,85 @@ class ChartPage extends StatefulWidget {
 class _ChartPageState extends State<ChartPage> {
   String _selectedTimeframe = '1D';
 
+  List<FlSpot> _spots = [];
+  Timer? _timer;
+  double _currentPrice = 0.0;
+  double _minPrice = 0.0;
+  double _maxPrice = 0.0;
+  int _timeCounter = 0;
+  final int _maxDataPoints = 60;
+  double _startPrice = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = Get.arguments as Map? ?? {};
+      _startPrice = (args['price'] as num?)?.toDouble() ?? 67452.00;
+      _currentPrice = _startPrice;
+      _minPrice = _currentPrice * 0.995;
+      _maxPrice = _currentPrice * 1.005;
+
+      final random = Random();
+      double price = _currentPrice;
+      for (int i = 0; i < _maxDataPoints; i++) {
+        _spots.add(FlSpot(i.toDouble(), price));
+        price = price + (random.nextDouble() - 0.5) * (_startPrice * 0.002);
+        if (price > _maxPrice) _maxPrice = price;
+        if (price < _minPrice) _minPrice = price;
+        _timeCounter++;
+      }
+
+      setState(() {});
+
+      _timer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
+        if (!mounted) return;
+        setState(() {
+          final random = Random();
+          double change = (random.nextDouble() - 0.5) * (_startPrice * 0.0025);
+          
+          // Add some trend sometimes
+          if (random.nextDouble() > 0.8) {
+            change *= 2.5; 
+          }
+          
+          _currentPrice = _currentPrice + change;
+
+          if (_currentPrice > _maxPrice) _maxPrice = _currentPrice;
+          if (_currentPrice < _minPrice) _minPrice = _currentPrice;
+
+          _spots.add(FlSpot(_timeCounter.toDouble(), _currentPrice));
+          if (_spots.length > _maxDataPoints) {
+            _spots.removeAt(0);
+          }
+          _timeCounter++;
+        });
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final args = Get.arguments as Map? ?? {};
     final name = args['name'] as String? ?? 'Bitcoin';
     final symbol = args['symbol'] as String? ?? 'BTC';
-    final price = (args['price'] as num?)?.toDouble() ?? 67452.00;
-    final change = (args['change'] as num?)?.toDouble() ?? 2.45;
-    final isUp = change >= 0;
+    
+    final initialChange = (args['change'] as num?)?.toDouble() ?? 2.45;
+    final displayPrice = _currentPrice == 0.0 ? _startPrice : _currentPrice;
+    
+    // Calculate new change based on real-time price
+    double currentChange = initialChange;
+    if (_startPrice > 0) {
+      currentChange = initialChange + ((displayPrice - _startPrice) / _startPrice * 100);
+    }
+    
+    final isUp = currentChange >= 0;
 
     return Scaffold(
       backgroundColor: AppTheme.darkBg,
@@ -41,29 +115,117 @@ class _ChartPageState extends State<ChartPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('\$${price.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text('\$${displayPrice.toStringAsFixed(displayPrice < 10 ? 4 : 2)}', style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
               const SizedBox(height: 4),
               Row(children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(color: (isUp ? AppTheme.accentGreen : AppTheme.errorRed).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                  child: Text('${isUp ? '+' : ''}$change%', style: GoogleFonts.inter(fontSize: 13, color: isUp ? AppTheme.accentGreen : AppTheme.errorRed, fontWeight: FontWeight.w600)),
+                  child: Text('${isUp ? '+' : ''}${currentChange.toStringAsFixed(2)}%', style: GoogleFonts.inter(fontSize: 13, color: isUp ? AppTheme.accentGreen : AppTheme.errorRed, fontWeight: FontWeight.w600)),
                 ),
                 const SizedBox(width: 8),
-                Text('${isUp ? '+' : ''}\$${(price * change / 100).toStringAsFixed(2)} (24h)', style: GoogleFonts.inter(fontSize: 13, color: isUp ? AppTheme.accentGreen : AppTheme.errorRed)),
+                Text('${isUp ? '+' : ''}\$${(displayPrice * currentChange / 100).toStringAsFixed(displayPrice < 10 ? 4 : 2)} (24h)', style: GoogleFonts.inter(fontSize: 13, color: isUp ? AppTheme.accentGreen : AppTheme.errorRed)),
               ]),
             ]),
           ),
           const SizedBox(height: 24),
           Container(
-            height: 300, margin: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(color: AppTheme.darkCard, borderRadius: BorderRadius.circular(16)),
-            child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.show_chart, size: 64, color: AppTheme.primaryPurple.withValues(alpha: 0.5)),
-              const SizedBox(height: 12),
-              Text('Chart Real-time', style: GoogleFonts.inter(fontSize: 16, color: AppTheme.textSecondary)),
-              Text('(Candlestick Chart akan tampil di sini)', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary.withValues(alpha: 0.7))),
-            ])),
+            height: 300,
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.only(right: 16, left: 0, top: 24, bottom: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.darkCard,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.glassBorder),
+            ),
+            child: _spots.isEmpty ? const Center(child: CircularProgressIndicator()) : LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: (_maxPrice - _minPrice) <= 0 ? 1 : (_maxPrice - _minPrice) / 4,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    strokeWidth: 1,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 56,
+                      getTitlesWidget: (value, meta) {
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 8.0, right: 4.0),
+                          child: Text(
+                            value.toStringAsFixed(displayPrice < 10 ? 4 : 2),
+                            style: GoogleFonts.inter(
+                              color: AppTheme.textSecondary,
+                              fontSize: 10,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                minX: _spots.first.x,
+                maxX: _spots.last.x,
+                minY: _minPrice - (_minPrice * 0.001),
+                maxY: _maxPrice + (_maxPrice * 0.001),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: _spots,
+                    isCurved: true,
+                    curveSmoothness: 0.2,
+                    color: isUp ? AppTheme.accentGreen : AppTheme.errorRed,
+                    barWidth: 2,
+                    isStrokeCapRound: true,
+                    dotData: FlDotData(
+                      show: true,
+                      checkToShowDot: (spot, barData) => spot.x == _spots.last.x,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 4,
+                          color: isUp ? AppTheme.accentGreen : AppTheme.errorRed,
+                          strokeWidth: 2,
+                          strokeColor: Colors.white,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        colors: [
+                          (isUp ? AppTheme.accentGreen : AppTheme.errorRed).withValues(alpha: 0.3),
+                          (isUp ? AppTheme.accentGreen : AppTheme.errorRed).withValues(alpha: 0.0),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                ],
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (touchedSpot) => AppTheme.darkBg,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((LineBarSpot touchedSpot) {
+                        return LineTooltipItem(
+                          '\$${touchedSpot.y.toStringAsFixed(displayPrice < 10 ? 4 : 2)}',
+                          GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           Padding(
@@ -90,7 +252,7 @@ class _ChartPageState extends State<ChartPage> {
                 child: SizedBox(
                   height: 48,
                   child: ElevatedButton.icon(
-                    onPressed: () => _showTradeSheet(context, 'buy', name, symbol, price, args['id'] as String?),
+                    onPressed: () => _showTradeSheet(context, 'buy', name, symbol, displayPrice, args['id'] as String?),
                     icon: const Icon(Icons.trending_up, size: 20),
                     label: const Text('Beli'),
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentGreen),
@@ -102,7 +264,7 @@ class _ChartPageState extends State<ChartPage> {
                 child: SizedBox(
                   height: 48,
                   child: ElevatedButton.icon(
-                    onPressed: () => _showTradeSheet(context, 'sell', name, symbol, price, args['id'] as String?),
+                    onPressed: () => _showTradeSheet(context, 'sell', name, symbol, displayPrice, args['id'] as String?),
                     icon: const Icon(Icons.trending_down, size: 20),
                     label: const Text('Jual'),
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
@@ -129,7 +291,7 @@ class _ChartPageState extends State<ChartPage> {
 
   void _showTradeSheet(BuildContext context, String type, String name, String symbol, double price, String? marketId) {
     final isBuy = type == 'buy';
-    final amountController = TextEditingController(text: '0.001');
+    final amountController = TextEditingController(text: '0');
     final formKey = GlobalKey<FormState>();
 
     Get.bottomSheet(
@@ -241,10 +403,10 @@ class _ChartPageState extends State<ChartPage> {
                   ),
                   const SizedBox(height: 12),
                   Row(children: [
-                    _buildQuickAmount('0.001', amountController, setSheetState), const SizedBox(width: 8),
-                    _buildQuickAmount('0.01', amountController, setSheetState), const SizedBox(width: 8),
-                    _buildQuickAmount('0.1', amountController, setSheetState), const SizedBox(width: 8),
-                    _buildQuickAmount('1', amountController, setSheetState),
+                    _buildQuickAmount('+0.01', 0.01, amountController, setSheetState), const SizedBox(width: 8),
+                    _buildQuickAmount('+0.1', 0.1, amountController, setSheetState), const SizedBox(width: 8),
+                    _buildQuickAmount('+1.0', 1.0, amountController, setSheetState), const SizedBox(width: 8),
+                    _buildMaxAmount(type, symbol, marketId, price, amountController, setSheetState),
                   ]),
                   const SizedBox(height: 20),
                   Container(
@@ -279,14 +441,54 @@ class _ChartPageState extends State<ChartPage> {
     );
   }
 
-  Widget _buildQuickAmount(String amount, TextEditingController controller, void Function(void Function()) setState) {
+  Widget _buildQuickAmount(String label, double amountToAdd, TextEditingController controller, void Function(void Function()) setState) {
     return Expanded(
       child: GestureDetector(
-        onTap: () { controller.text = amount; setState(() {}); },
+        onTap: () {
+          final current = double.tryParse(controller.text) ?? 0;
+          final newVal = current + amountToAdd;
+          final truncated = (newVal * 1000000).floorToDouble() / 1000000;
+          controller.text = truncated.toString();
+          setState(() {});
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(color: AppTheme.darkBg, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppTheme.glassBorder)),
-          child: Text(amount, textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+          child: Text(label, textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMaxAmount(String type, String symbol, String? marketId, double price, TextEditingController controller, void Function(void Function()) setState) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          final isBuy = type == 'buy';
+          if (isBuy) {
+            final auth = Get.find<AuthController>();
+            final balance = auth.user.value?.virtualBalance ?? 0;
+            final maxAmount = balance / price;
+            // truncate rather than round up to avoid insufficient balance error
+            final truncated = (maxAmount * 1000000).floorToDouble() / 1000000;
+            controller.text = truncated.toString();
+          } else {
+            final portfolio = Get.find<PortfolioController>();
+            final id = marketId ?? symbol.toLowerCase();
+            final asset = portfolio.portfolioAssets.firstWhereOrNull((a) => a.marketId == id);
+            final maxAmount = asset?.amount ?? 0;
+            controller.text = maxAmount.toString();
+          }
+          setState(() {});
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryPurple.withValues(alpha: 0.2), 
+            borderRadius: BorderRadius.circular(8), 
+            border: Border.all(color: AppTheme.primaryPurple)
+          ),
+          child: Text('MAX', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primaryPurple)),
         ),
       ),
     );

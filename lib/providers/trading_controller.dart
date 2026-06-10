@@ -125,7 +125,8 @@ class TradingController extends GetxController {
 
       final existingPortfolio = _portfolioController.portfolioAssets
           .firstWhereOrNull((p) => p.marketId == marketId);
-      if (existingPortfolio == null || existingPortfolio.amount < amount) {
+      // Tambahkan toleransi kecil untuk floating point (0.0001)
+      if (existingPortfolio == null || (existingPortfolio.amount - amount) < -0.0001) {
         return {'success': false, 'message': 'Jumlah aset tidak mencukupi'};
       }
 
@@ -156,10 +157,8 @@ class TradingController extends GetxController {
       await _firestoreService.updateUserData(_authController.user.value!.toMap(), userId);
 
       final remaining = existingPortfolio.amount - amount;
-      if (remaining <= 0) {
-        await _firestoreService.updatePortfolio(
-          existingPortfolio.copyWith(amount: 0, avgBuyPrice: 0),
-        );
+      if (remaining <= 0.0001) {
+        await _firestoreService.deletePortfolio(existingPortfolio.id);
       } else {
         await _firestoreService.updatePortfolio(
           existingPortfolio.copyWith(amount: remaining),
