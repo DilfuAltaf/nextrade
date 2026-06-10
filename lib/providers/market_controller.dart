@@ -31,11 +31,15 @@ class MarketController extends GetxController {
 
   Future<void> _loadWatchlist() async {
     if (!Get.isRegistered<AuthController>()) return;
-    final userId = Get.find<AuthController>().user.value?.id;
+    final userId = Get.find<AuthController>().user.value?.uid;
     if (userId != null) {
-      final wList = await _firestoreService.getWatchlist(userId);
-      watchlistMarketIds.value = wList.map((w) => w.marketId).toSet();
-      applyFilters();
+      try {
+        final wList = await _firestoreService.getWatchlist(userId);
+        watchlistMarketIds.value = wList.map((w) => w.marketId).toSet();
+        applyFilters();
+      } catch (e) {
+        print('Error loading watchlist: $e');
+      }
     }
   }
 
@@ -44,7 +48,7 @@ class MarketController extends GetxController {
       Get.snackbar('Error', 'Silakan login terlebih dahulu');
       return;
     }
-    final userId = Get.find<AuthController>().user.value?.id;
+    final userId = Get.find<AuthController>().user.value?.uid;
     if (userId == null) {
       Get.snackbar('Error', 'Silakan login terlebih dahulu');
       return;
@@ -80,24 +84,31 @@ class MarketController extends GetxController {
   }
 
   Future<void> loadMarkets() async {
+    isLoading.value = true;
+    
+    List<MarketModel> dbMarkets = [];
     try {
-      isLoading.value = true;
       await _firestoreService.seedMarkets();
-      final dbMarkets = await _firestoreService.getMarkets();
-      
-      // Try to load initial cryptos from REST API (may fail on Web due to CORS)
-      final cryptoMarkets = await _binanceService.getInitialCryptos();
-      
-      markets.value = [...dbMarkets, ...cryptoMarkets];
-      applyFilters();
-      
-      _startRealtimeSimulation();
-      _startBinanceWebSocket();
+      dbMarkets = await _firestoreService.getMarkets();
     } catch (e) {
-      Get.snackbar('Error', 'Gagal memuat data market');
-    } finally {
-      isLoading.value = false;
+      print('Firebase seed/get markets error: $e');
     }
+    
+    List<MarketModel> cryptoMarkets = [];
+    try {
+      // Try to load initial cryptos from REST API (may fail on Web due to CORS)
+      cryptoMarkets = await _binanceService.getInitialCryptos();
+    } catch (e) {
+      print('Binance get initial cryptos error: $e');
+    }
+    
+    markets.value = [...dbMarkets, ...cryptoMarkets];
+    applyFilters();
+    
+    _startRealtimeSimulation();
+    _startBinanceWebSocket();
+    
+    isLoading.value = false;
   }
 
   void _startBinanceWebSocket() {
